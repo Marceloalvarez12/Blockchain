@@ -3,7 +3,7 @@ require("dotenv").config(); // Si usas .env para claves privadas de testnet
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.20",
+  solidity: "0.8.28",
   networks: {
     hardhat: { // Red local por defecto para desarrollo rápido
       // chainId: 1337 // Puedes configurar esto si es necesario
