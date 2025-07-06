@@ -1,13 +1,13 @@
-Sistema de Credenciales Digitales en Blockchain
+# Sistema de Credenciales Digitales en Blockchain
 Este proyecto es una aplicación full-stack que permite a una institución educativa emitir, gestionar y verificar credenciales estudiantiles digitales como Tokens No Fungibles (NFTs) en una blockchain compatible con Ethereum.
 
-El sistema se compone de dos partes principales:
+# El sistema se compone de dos partes principales:
 
 1-Backend (Django): Una API REST robusta que gestiona la lógica de negocio, se comunica con la blockchain y sirve como panel administrativo.
 
 2-Blockchain (Hardhat): Un Smart Contract de tipo Soulbound (NFT no transferible) que define la lógica de las credenciales en la cadena de bloques.
 
-Características Principales
+# Características Principales
 -Emisión de Credenciales: La institución puede emitir credenciales únicas a las billeteras de los alumnos.
 
 -Verificación Descentralizada: Cualquiera puede verificar la autenticidad de una credencial consultando el Smart Contract, sin necesidad de intermediarios.
@@ -18,7 +18,7 @@ Características Principales
 
 -Tokens Soulbound: Las credenciales están diseñadas para no ser transferibles, vinculando la identidad digital directamente al alumno.
 
-Arquitectura y Tecnologías Utilizadas
+# Arquitectura y Tecnologías Utilizadas
 Backend:
 -Framework: Django & Django REST Framework
 
@@ -69,28 +69,28 @@ Navega a la carpeta del backend, crea un entorno virtual de Python y activa las 
 cd ../backend  # Sube un nivel y entra a backend
 python -m venv venv
 
-# Activar el entorno virtual
-# En Windows:
-.\venv\Scripts\activate
-# En macOS/Linux:
-source venv/bin/activate
+-Activar el entorno virtual
+  En Windows:
+    .\venv\Scripts\activate
+  En macOS/Linux:
+    source venv/bin/activate
 
-# Instalar las dependencias de Python
+-Instalar las dependencias de Python
 pip install -r requirements.txt
 
 4. Configurar las Variables de Entorno
 En la carpeta backend/, crea un archivo llamado .env a partir del ejemplo env.example (si lo tienes) o créalo desde cero con el siguiente contenido:
-# backend/.env
+- backend/.env
 
-# Configuración de Django
+- Configuración de Django
 SECRET_KEY="tu-clave-secreta-aqui"
 DEBUG=True
 
-# Configuración de Blockchain (para nodo local de Hardhat)
+- Configuración de Blockchain (para nodo local de Hardhat)
 BLOCKCHAIN_NETWORK_RPC_URL="http://127.0.0.1:8545"
 DJANGO_WALLET_PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 
-# Configuración IPFS (nodo local)
+- Configuración IPFS (nodo local)
 IPFS_API_MULTIADDR="/ip4/127.0.0.1/tcp/5001"
 IPFS_GATEWAY_URL="http://127.0.0.1:8080/ipfs/"
 
@@ -100,23 +100,23 @@ Nota: La DJANGO_WALLET_PRIVATE_KEY es la clave privada de la primera cuenta que 
 Debes tener 3 o 4 terminales abiertas.
 
 Terminal 1: Iniciar el Nodo Blockchain
-# Desde la carpeta /blockchain
+-Desde la carpeta /blockchain
 npx hardhat node
 
-Terminal 2: Iniciar el Nodo IPFS
+Segundo paso: Iniciar el Nodo IPFS
 
 Abre la aplicación IPFS Desktop y espera a que se conecte.
 
 Terminal 3: Desplegar el Smart Contract
 
-# Desde la carpeta /blockchain
+-Desde la carpeta /blockchain
 npx hardhat run scripts/deploy.js --network localhost
 
 Este comando despliega el contrato y crea los archivos de configuración para que Django pueda comunicarse con él.
 
 Terminal 4: Iniciar el Servidor Django
 
-# Desde la carpeta /backend y con el venv activado
+-Desde la carpeta /backend y con el venv activado
 python manage.py migrate
 python manage.py runserver
 
@@ -144,4 +144,3 @@ Verifica los detalles de una credencial existente por su ID.
 GET /api/credenciales/alumno/<str:direccion_alumno>/
 
 Lista todas las credenciales pertenecientes a una dirección de alumno.
-jkj
