@@ -44,7 +44,7 @@ Entorno de Desarrollo:
 
 -JavaScript/Node.js: npm para la gestión de dependencias de Hardhat.
 
-Requisitos Previos
+# Requisitos Previos
 Antes de comenzar, asegúrate de tener instalado lo siguiente:
 
 Node.js (versión LTS recomendada)
@@ -53,7 +53,7 @@ Python (versión 3.8 o superior)
 
 IPFS Desktop (o acceso a un nodo IPFS)
 
-Guía de Instalación y Ejecución Local
+# Guía de Instalación y Ejecución Local
 Sigue estos pasos para poner en marcha el proyecto en tu máquina local.
 
 1. Clonar el Repositorio: git clone <URL_DEL_REPOSITORIO>
@@ -122,7 +122,7 @@ python manage.py runserver
 
 Tu API ahora estará disponible en http://127.0.0.1:8000/.
 
-Endpoints de la API
+# Endpoints de la API
 POST /api/credenciales/emitir/
 
 Emite una nueva credencial.
