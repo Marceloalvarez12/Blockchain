@@ -1,0 +1,19 @@
+# Node / Hardhat
+node_modules
+coverage
+coverage.json
+typechain-types
+cache
+artifacts
+
+# Python / Django
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+
+# Archivos de entorno (¡MUY IMPORTANTE!)
+.env 
+
+# Archivos del editor
+.vscode/
