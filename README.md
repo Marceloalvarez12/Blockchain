@@ -1,65 +1,108 @@
+# Sistema de Credenciales Digitales con Hyperledger Fabric
 
-El objetivo es abstraer la complejidad de la infraestructura de Fabric y darle instrucciones claras sobre **cómo interactuar con la red blockchain ya funcional**. Este documento asume que tú, como administrador de la blockchain, ya has desplegado la red.
+## 1. Resumen
 
+Este documento describe la arquitectura, instalación y operación de una red blockchain privada para la gestión de credenciales digitales. La implementación se basa en **Hyperledger Fabric v2.5** y sigue una planificación de proyecto orientada a un entorno empresarial.
 
-# 📖 Guía de Integración de Backend con la Red de Credenciales Hyperledger Fabric
+La red está compuesta por dos organizaciones (una emisora y una verificadora) que interactúan a través de un canal de comunicación privado. La lógica de negocio está encapsulada en un Smart Contract (Chaincode) escrito en Go.
 
-¡Hola, Desarrollador de Backend!
+---
 
-Bienvenido al proyecto de credenciales digitales. Ya hemos desplegado y configurado una red blockchain privada utilizando **Hyperledger Fabric**. Tu misión, si decides aceptarla, es construir el backend (API) que interactuará con esta red para emitir y verificar credenciales.
+## 2. Requisitos del Entorno de Desarrollo
 
-Esta guía te explicará cómo funciona la red a un alto nivel y te dará las herramientas y comandos necesarios para interactuar con ella.
+Para replicar este entorno en un sistema **Windows**, es necesario tener instalado el siguiente software:
 
-## 🏛️ Arquitectura Simplificada
+-   **Docker Desktop (v4+):** Configurado con el backend **WSL 2**.
+-   **Go (v1.18+):** El lenguaje del chaincode.
+-   **Node.js (v16+ LTS):** Para herramientas de Fabric.
+-   **Git (v2.28+):** Para descargar los ejemplos y proveer una terminal Bash.
 
-No necesitas ser un experto en Fabric, pero es útil entender el flujo:
+---
 
-```mermaid
-graph TD
-    A[Tu Backend (API)] -->|Llama a un Script o usa un SDK| B{Aplicación Cliente de Fabric};
-    B -->|Se conecta a la red usando una identidad| C(Nodos Peer de Fabric);
-    C -->|Ejecuta funciones en el| D[(Chaincode)];
-    D -->|Lee/Escribe en| E[((Ledger - Blockchain))];
-```
+## 3. Guía de Instalación y Despliegue
 
-Tu **backend actuará como el cliente** que envía órdenes al `Chaincode` (nuestro "smart contract"). El chaincode que está actualmente desplegado se llama `basic` y vive en un canal llamado `mychannel`.
+La siguiente secuencia de pasos debe ejecutarse para construir la red desde un entorno limpio.
 
-## ⚙️ El Chaincode: Tus Funciones Disponibles
+### 3.1. Descarga de Activos de Fabric
 
-El chaincode de ejemplo que está desplegado tiene la estructura de un "activo" genérico. Mapearemos los datos de nuestras credenciales a esta estructura. La función principal que usarás es:
+1.  **Crear Directorio de Proyecto:**
+    En una terminal **PowerShell**, crea un directorio en una ruta corta (ej. `C:\fabric-project`).
+    ```powershell
+    mkdir C:\fabric-project
+    cd C:\fabric-project
+    ```
 
-`CreateAsset(id, color, size, owner, appraisedValue)`
+2.  **Obtener Script de Instalación:**
+    Descarga el script oficial.
+    ```powershell
+    Invoke-WebRequest -Uri https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh -OutFile install-fabric.sh
+    ```
 
--   `id` (string): Un identificador único para la credencial (ej: `"credencial-marcelo-001"`).
--   `color` (string): Puedes usar este campo para el **Programa del Alumno** (ej: `"Ing. Blockchain"`).
--   `size` (int): Puedes usarlo para el **ID del Alumno** (ej: `2024001`).
--   `owner` (string): El **Nombre del Alumno** (ej: `"Marcelo"`).
--   `appraisedValue` (int): Puedes usarlo para la **Fecha de Emisión** en formato timestamp o AAAA (ej: `2024`).
+3.  **Ejecutar Script de Instalación:**
+    Este script debe ser ejecutado en una terminal **Git Bash**.
+    ```bash
+    ./install-fabric.sh docker samples binary
+    ```
+    Este comando descargará las imágenes de Docker, los binarios de Fabric (`peer`, `orderer`, etc.) y el repositorio `fabric-samples`.
 
-**Importante:** En una fase futura, personalizaremos este chaincode para que tenga campos más apropiados (`idAlumno`, `programa`, etc.), pero por ahora, trabajaremos con esta estructura de ejemplo.
+### 3.2. Configuración Permanente del Entorno
 
-## 🚀 Cómo Interactuar con la Red (El Kit de Herramientas del Backend)
+Para que los binarios de Fabric sean accesibles desde cualquier terminal, su ruta debe ser añadida a las variables de entorno del sistema.
 
-Para interactuar, necesitarás ejecutar comandos desde una terminal. Hemos preparado un "entorno de prueba" usando la **CLI (Command Line Interface)** de Fabric, que simula lo que un SDK haría programáticamente.
+1.  **Añadir al PATH del Sistema:**
+    -   Abre las "Variables de entorno del sistema" en Windows.
+    -   En "Variables del sistema", edita la variable `Path`.
+    -   Añade una nueva entrada con la ruta absoluta: `C:\fabric-project\fabric-samples\bin`
 
-### ✅ Prerrequisitos para tu Entorno
+2.  **Reiniciar el Sistema:** Es **obligatorio** reiniciar la computadora para que los cambios en el PATH se apliquen a todas las terminales y a Docker Desktop.
 
-Asegúrate de tener en tu máquina:
-- **Git:** Para tener acceso a una terminal Bash.
+### 3.3. Levantamiento de la Red Blockchain
 
-### 📜 Pasos para la Interacción
+Estos comandos deben ejecutarse en una terminal **PowerShell** dentro de VS Code, después de reiniciar el sistema.
 
-**1. Abre una Terminal Git Bash:**
-Navega a la carpeta `fabric-samples/test-network` de este proyecto. Todas las interacciones se harán desde ahí.
+1.  **Verificar Entorno Post-Reinicio:**
+    -   Asegúrate de que Docker Desktop esté corriendo.
+    -   Verifica que los binarios son accesibles:
+        ```powershell
+        peer.exe version
+        ```
+
+2.  **Navegar al Directorio de la Red:**
+    ```powershell
+    cd C:\fabric-project\fabric-samples\test-network
+    ```
+
+3.  **Iniciar la Red y el Canal:**
+    ```powershell
+    # Limpia cualquier residuo de ejecuciones anteriores
+    .\network.sh down -v
+    
+    # Levanta la red, crea el canal 'mychannel', usa CAs y CouchDB
+    .\network.sh up createChannel -ca -s couchdb
+    ```
+    Espera a que finalice con el mensaje `========= All GOOD, Test Network is up and running =========`.
+
+4.  **Desplegar el Chaincode:**
+    ```powershell
+    .\network.sh deployCC -ccn basic -ccp ../asset-transfer-basic/chaincode-go -ccl go
+    ```
+    Espera a que finalice con el mensaje `========= Chaincode is successfully deployed on channel 'mychannel' ===========`.
+
+---
+
+## 4. Guía de Operación (Interacción con la Red)
+
+Se recomienda usar una terminal **Git Bash** para la interacción, ya que maneja los argumentos JSON de forma más consistente.
+
+### 4.1. Configuración de Identidad de Cliente
+
+Antes de interactuar, es necesario adoptar la identidad de un miembro de la red. Cada vez que se abra una nueva terminal, ejecuta el siguiente bloque:
+
 ```bash
-cd /ruta/a/fabric-samples/test-network
-```
+# Navegar al directorio de trabajo (si es necesario)
+cd /c/fabric-project/fabric-samples/test-network
 
-**2. Adopta la Identidad de la Institución (Org1):**
-La red es "permisionada", por lo que debes actuar en nombre de una organización. Cada vez que abras una nueva terminal, ejecuta este bloque de código para "iniciar sesión" como el Administrador de Org1.
-
-```bash
-# Exportar las variables de identidad de Admin@Org1
+# Exportar las variables de entorno para el Admin de Org1
 export PATH=${PWD}/../../bin:$PATH
 export FABRIC_CFG_PATH=${PWD}/../config/
 export CORE_PEER_TLS_ENABLED=true
@@ -68,61 +111,36 @@ export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.e
 export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
 export CORE_PEER_ADDRESS=localhost:7051
 ```
-*Verifica que funcionó ejecutando `peer version`. Deberías ver la versión instalada.*
 
-**3. Interactuar con el Chaincode:**
+### 4.2. Comandos Principales
 
-#### **Para EMITIR una nueva credencial (Transacción de Escritura)**
+#### Emitir una Nueva Credencial (Invoke)
 
-Usa el comando `peer chaincode invoke`. Este es el comando completo:
-
-```bash
-peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" -C mychannel -n basic --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" -c '{"function":"CreateAsset","Args":["credencial002", "Ingenieria de Software", "12345", "Ana Lopez", "2024"]}'
-```
-
-**Parámetros Clave en la llamada:**
--   `-C mychannel`: El canal donde se ejecuta la transacción.
--   `-n basic`: El nombre del chaincode.
--   `-c '{"function":"CreateAsset","Args":[...]}':` La función a llamar y sus argumentos en formato JSON. **Aquí es donde tu backend construirá el JSON con los datos del alumno.**
-
-**Respuesta Esperada:**
-```
-INFO [chaincodeCmd] chaincodeInvokeOrQuery -> Chaincode invoke successful. result: status:200
-```
-
-#### **Para VERIFICAR una credencial (Transacción de Lectura)**
-
-Usa el comando `peer chaincode query`. Es mucho más simple.
+Este comando **escribe** una nueva transacción en el ledger.
 
 ```bash
-# Para verificar una credencial específica por su ID
-peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","credencial002"]}'
-
-# Para ver TODAS las credenciales (útil para depuración)
-peer chaincode query -C mychannel -n basic -c '{"Args":["GetAllAssets"]}'
+peer chaincode invoke \
+    -o localhost:7050 \
+    --ordererTLSHostnameOverride orderer.example.com \
+    --tls \
+    --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+    -C mychannel \
+    -n basic \
+    --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+    --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+    -c '{"function":"CreateAsset","Args":["credencial01", "Azul", "1", "Marcelo", "2024"]}'
 ```
-**Respuesta Esperada (para `ReadAsset`):**
+**Respuesta esperada:** `Chaincode invoke successful. result: status:200`
+
+#### Verificar una Credencial (Query)
+
+Este comando **lee** el estado actual de un activo en el ledger sin generar una nueva transacción.
+
+```bash
+peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","credencial01"]}'
+```
+**Respuesta esperada:** Un objeto JSON con los detalles de la credencial.
+
 ```json
-{"ID":"credencial002","color":"Ingenieria de Software","size":12345,"owner":"Ana Lopez","appraisedValue":2024}
+{"ID":"credencial01","Color":"Azul","Size":1,"Owner":"Marcelo","AppraisedValue":2024}
 ```
-
-## 🎯 Tu Tarea como Desarrollador de Backend
-
-Tu objetivo es crear una API que envuelva estos comandos de terminal.
-
-1.  **Crea un Endpoint `POST /api/credenciales`:**
-    -   Debe aceptar un cuerpo JSON con los datos de una nueva credencial (ej: `idAlumno`, `nombre`, `programa`).
-    -   Dentro del endpoint, tu código debe:
-        a.  Construir el string JSON de `Args` para la función `CreateAsset`.
-        b.  Ejecutar el comando `peer chaincode invoke` como un **subproceso** del sistema operativo.
-        c.  Capturar la salida del comando.
-        d.  Devolver una respuesta de éxito (`201 Created`) si el comando funcionó, o un error (`500`) si falló.
-
-2.  **Crea un Endpoint `GET /api/credenciales/:id`:**
-    -   Debe aceptar el ID de una credencial en la URL.
-    -   Tu código debe ejecutar el comando `peer chaincode query` con `ReadAsset` y el ID proporcionado.
-    -   Capturar la salida JSON, parsearla y devolverla al cliente.
-
-¡Mucha suerte! La red blockchain está lista y esperándote. Cualquier duda sobre Fabric, házmela saber.
-
----
