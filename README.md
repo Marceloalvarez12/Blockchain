@@ -139,53 +139,65 @@ Este comando **lee** el estado actual de un activo en el ledger sin generar una 
 ```bash
 peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","credencial01"]}'.
 ```
-Resumen del proyecto:
-Arquitectura de la Infraestructura Blockchain (Hyperledger Fabric)
-Este documento describe los componentes fundamentales, el flujo de datos y la estructura del ledger de la red blockchain implementada para el sistema de credenciales digitales.
-1. Visión General
-La plataforma seleccionada es Hyperledger Fabric v2.5, un framework de la Linux Foundation diseñado para soluciones empresariales. Se implementó una red privada y permisionada, lo que garantiza que solo las entidades autorizadas puedan participar, asegurando un alto grado de control, seguridad y privacidad.
-La topología de la red de prueba consiste en:
-2 Organizaciones: Org1 (Emisora) y Org2 (Verificadora).
-1 Servicio de Ordenamiento: Para el consenso de transacciones.
-1 Canal de Comunicación: Un ledger privado llamado mychannel donde interactúan las organizaciones.
-2. Componentes Principales
-La red está compuesta por varios tipos de nodos, cada uno con una función específica, que se ejecutan como contenedores Docker independientes.
-2.1. Nodos Peer (Pares)
-Función: Son los nodos fundamentales de la red, mantenidos por cada organización.
-Responsabilidades:
-Almacenar el Ledger: Cada peer mantiene una copia completa y sincronizada del libro de contabilidad del canal.
-Ejecutar el Chaincode: Simulan las transacciones y validan si cumplen con la lógica de negocio definida en el smart contract.
-Endosar Transacciones: Firman criptográficamente las propuestas de transacción válidas antes de que sean enviadas para su ordenamiento.
-2.2. Nodo Orderer (Servicio de Ordenamiento)
-Función: Actúa como el servicio central de consenso de la red.
-Responsabilidades:
-Recibir Transacciones Endosadas: Recibe las transacciones validadas de los clientes.
-Ordenar y Empaquetar: Ordena las transacciones cronológicamente y las empaqueta en bloques inmutables.
-Distribuir Bloques: Entrega los nuevos bloques a todos los peers del canal para que actualicen sus ledgers.
-2.3. Autoridad de Certificación (CA)
-Función: Es el servicio de gestión de identidades de cada organización.
-Responsabilidades:
-Emitir Identidades: Genera los certificados digitales (X.509) que sirven como "pasaportes" para todos los participantes (peers, orderers, usuarios, aplicaciones).
-Gestionar el MSP (Membership Service Provider): Provee la infraestructura para validar que una firma pertenece a una identidad válida y autorizada dentro de la red.
-3. El Ledger: Almacenamiento de Datos
-El ledger de Fabric es la "fuente de la verdad" y se compone de dos partes distintas pero relacionadas.
-3.1. La Cadena de Bloques (Blockchain)
-¿Qué es? Es un historial de transacciones, estructurado como una cadena de bloques enlazados criptográficamente. Es un registro de solo adición (append-only).
-¿Qué almacena? Cada bloque contiene un conjunto de transacciones, incluyendo los argumentos de la función llamada y los read-write sets (qué datos se leyeron y qué nuevos datos se escribieron).
-Propósito: Garantizar la inmutabilidad y trazabilidad. Permite una auditoría completa de la historia de cualquier activo.
-Ubicación Física: Se almacena en el sistema de archivos del contenedor del peer.
-3.2. El Estado Mundial (World State)
-¿Qué es? Es una base de datos que representa el estado actual y final de todos los activos en el ledger. Es una "fotografía" del presente.
-¿Qué almacena? Contiene pares clave-valor. La clave es el ID del activo (ej. "credencial01") y el valor son sus atributos actuales (ej. {"Owner":"Marcelo", "Programa":"Ing. Blockchain", ...}).
-Propósito: Permitir consultas de lectura (query) rápidas y eficientes. En lugar de recorrer toda la historia, el peer consulta directamente esta base de datos.
-Ubicación Física: En nuestra implementación, se utiliza CouchDB. Los datos residen en un contenedor Docker de base de datos separado, vinculado a cada peer, y son accesibles a través de su API o interfaz web.
-4. Chaincode (Smart Contract)
-¿Qué es? Es el programa que encapsula la lógica de negocio y las reglas de la aplicación. En nuestro caso, está escrito en Go.
-¿Para qué sirve?
-Define la estructura de datos de los activos (ej. la estructura de una Credencial).
-Implementa las funciones que pueden interactuar con el ledger (ej. CreateAsset, ReadAsset).
-Contiene la lógica de validación que determina si una transacción es válida o no.
-Ciclo de Vida: El chaincode es instalado en los peers y luego desplegado (cometido) en un canal para ser activado.
-5. Canales
-¿Qué es? Un mecanismo que permite crear un ledger privado y aislado entre un subconjunto de miembros de la red.
-Propósito: Proporcionar confidencialidad. Las transacciones y los datos de un canal solo son visibles para las organizaciones que son miembros de ese canal. Cada canal tiene su propio ledger y su propio chaincode instanciado. En este proyecto, se utiliza un único canal (mychannel) que incluye a todas las organizaciones.
+
+# Resumen del Proyecto: Arquitectura de la Infraestructura Blockchain (Hyperledger Fabric)
+
+Este documento describe los componentes fundamentales, el flujo de datos y la estructura del ledger de la red blockchain implementada para el sistema de **credenciales digitales**.
+
+---
+
+## 1. Visión General
+La plataforma seleccionada es **Hyperledger Fabric v2.5**, un framework de la Linux Foundation diseñado para soluciones empresariales.  
+
+- **Red privada y permisionada**: solo entidades autorizadas participan, garantizando control, seguridad y privacidad.  
+- **Topología de red de prueba**:  
+  - **2 Organizaciones**: Org1 (Emisora) y Org2 (Verificadora).  
+  - **1 Servicio de Ordenamiento**: Para consenso de transacciones.  
+  - **1 Canal de Comunicación**: Ledger privado `mychannel` donde interactúan las organizaciones.  
+
+---
+
+## 2. Componentes Principales
+
+La red se compone de **contenedores Docker** que ejecutan distintos tipos de nodos.
+
+### 2.1. Nodos Peer
+- **Función**: Nodos fundamentales de cada organización.  
+- **Responsabilidades**:  
+  - Mantener una copia sincronizada del ledger.  
+  - Ejecutar chaincode y validar transacciones.  
+  - Endosar (firmar) transacciones válidas.  
+
+### 2.2. Nodo Orderer (Servicio de Ordenamiento)
+- **Función**: Servicio central de consenso.  
+- **Responsabilidades**:  
+  - Recibir transacciones endosadas.  
+  - Ordenarlas cronológicamente y empaquetarlas en bloques.  
+  - Distribuir los bloques a los peers del canal.  
+
+### 2.3. Autoridad de Certificación (CA)
+- **Función**: Gestión de identidades de cada organización.  
+- **Responsabilidades**:  
+  - Emitir certificados digitales (X.509).  
+  - Gestionar el **MSP** (Membership Service Provider), validando identidades y firmas.  
+
+---
+
+## 3. El Ledger: Almacenamiento de Datos
+
+El ledger es la **fuente de verdad** de la red y está compuesto por:
+
+### 3.1. Cadena de Bloques (Blockchain)
+- **Historial inmutable de transacciones** en bloques enlazados criptográficamente.  
+- Cada bloque contiene transacciones con sus **read-write sets**.  
+- Se almacena en el sistema de archivos del peer.  
+
+### 3.2. Estado Mundial (World State)
+- **Base de datos actualizada del estado de los activos** (clave-valor).  
+- Ejemplo:  
+  ```json
+  {
+    "ID": "credencial01",
+    "Owner": "Marcelo",
+    "Programa": "Ing. Blockchain"
+  }
