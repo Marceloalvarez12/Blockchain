@@ -142,62 +142,266 @@ peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","credencial0
 
 # Resumen del Proyecto: Arquitectura de la Infraestructura Blockchain (Hyperledger Fabric)
 
-Este documento describe los componentes fundamentales, el flujo de datos y la estructura del ledger de la red blockchain implementada para el sistema de **credenciales digitales**.
+Este documento describe los componentes, el flujo de datos, la estructura del ledger y **todos los pasos** (de punta a punta) para levantar la red, desplegar el chaincode y habilitar el inicio de sesión con identidades de Fabric en el sistema de **credenciales digitales**.
 
 ---
 
 ## 1. Visión General
-La plataforma seleccionada es **Hyperledger Fabric v2.5**, un framework de la Linux Foundation diseñado para soluciones empresariales.  
 
-- **Red privada y permisionada**: solo entidades autorizadas participan, garantizando control, seguridad y privacidad.  
-- **Topología de red de prueba**:  
-  - **2 Organizaciones**: Org1 (Emisora) y Org2 (Verificadora).  
-  - **1 Servicio de Ordenamiento**: Para consenso de transacciones.  
-  - **1 Canal de Comunicación**: Ledger privado `mychannel` donde interactúan las organizaciones.  
+La plataforma seleccionada es **Hyperledger Fabric v2.5**, un framework de la Linux Foundation para soluciones empresariales.
+
+- **Red privada y permisionada**: solo entidades autorizadas participan.
+- **Topología de prueba**:
+  - **2 Organizaciones**: Org1 (Emisora) y Org2 (Verificadora).
+  - **1 Servicio de Ordenamiento** (Raft).
+  - **1 Canal**: `mychannel`.
 
 ---
 
 ## 2. Componentes Principales
 
-La red se compone de **contenedores Docker** que ejecutan distintos tipos de nodos.
+La red se compone de **contenedores Docker**.
 
-### 2.1. Nodos Peer
-- **Función**: Nodos fundamentales de cada organización.  
-- **Responsabilidades**:  
-  - Mantener una copia sincronizada del ledger.  
-  - Ejecutar chaincode y validar transacciones.  
-  - Endosar (firmar) transacciones válidas.  
+### 2.1. Peers
+- Mantienen el ledger (bloques + world state).
+- Ejecutan chaincode y **endosan** transacciones.
 
-### 2.2. Nodo Orderer (Servicio de Ordenamiento)
-- **Función**: Servicio central de consenso.  
-- **Responsabilidades**:  
-  - Recibir transacciones endosadas.  
-  - Ordenarlas cronológicamente y empaquetarlas en bloques.  
-  - Distribuir los bloques a los peers del canal.  
+### 2.2. Orderer
+- Recibe transacciones endosadas, las ordena en bloques y las distribuye.
 
-### 2.3. Autoridad de Certificación (CA)
-- **Función**: Gestión de identidades de cada organización.  
-- **Responsabilidades**:  
-  - Emitir certificados digitales (X.509).  
-  - Gestionar el **MSP** (Membership Service Provider), validando identidades y firmas.  
+### 2.3. CA (Certificate Authority)
+- Emite certificados X.509 y gestiona el **MSP**.
 
 ---
 
-## 3. El Ledger: Almacenamiento de Datos
+## 3. El Ledger
 
-El ledger es la **fuente de verdad** de la red y está compuesto por:
+### 3.1. Blockchain (histórico)
+- Cadena inmutable de bloques con transacciones y sus read/write sets.
 
-### 3.1. Cadena de Bloques (Blockchain)
-- **Historial inmutable de transacciones** en bloques enlazados criptográficamente.  
-- Cada bloque contiene transacciones con sus **read-write sets**.  
-- Se almacena en el sistema de archivos del peer.  
+### 3.2. World State (estado actual)
+- Base de datos **clave-valor** (p.ej. CouchDB).
 
-### 3.2. Estado Mundial (World State)
-- **Base de datos actualizada del estado de los activos** (clave-valor).  
-- Ejemplo:  
-  ```json
-  {
-    "ID": "credencial01",
-    "Owner": "Marcelo",
-    "Programa": "Ing. Blockchain"
-  }
+```json
+{
+  "ID": "credencial01",
+  "Owner": "Marcelo",
+  "Programa": "Ing. Blockchain"
+}
+```
+
+---
+
+## 4. Chaincode (Smart Contract)
+
+- Encapsula la lógica de negocio (Go).
+- Define estructura de activos y funciones (CreateAsset, ReadAsset, etc.).
+- Ciclo de vida: package → install → approve → commit → invoke.
+
+---
+
+## 5. Canales
+
+- Aíslan datos entre miembros.
+- Cada canal tiene su propio ledger y chaincode instanciado.
+- En este proyecto se usa `mychannel`.
+
+---
+
+## 6. Identidades y Login
+
+### 6.1. Registro de Usuario (Admin)
+- Admin registra al usuario en la CA.
+- La CA emite certificado X.509 (identidad Fabric).
+- Se asocia identidad con datos del usuario (y opcionalmente con la wallet pública si hay puente con Ethereum/Metamask).
+
+### 6.2. Inicio de Sesión (User)
+- En el frontend, el usuario elige "Iniciar sesión".
+- La app solicita firmar un mensaje (con certificado Fabric o wallet).
+- El backend verifica la firma contra el certificado emitido por la CA (MSP).
+- Si es válido, se crea sesión (JWT/Token) y se accede a su información on-chain.
+
+**Versión simple para no técnicos:**
+- **Registro**: el admin te crea una "credencial digital" (certificado).
+- **Login**: comprobás tu identidad firmando; si coincide, entrás.
+
+---
+
+## 7. Estructura de Credenciales (Ejemplo en Ledger)
+
+```json
+{
+  "CredencialID": "CRED-001",
+  "Usuario": "Marcelo Alvarez",
+  "Certificado": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
+  "Wallet": "0xAbC1234Ef...",
+  "Programa": "Ingeniería Blockchain",
+  "Estado": "Vigente"
+}
+```
+
+---
+
+## 8. Prerrequisitos (Windows/Linux/macOS)
+
+- Docker y Docker Compose funcionando.
+- Fabric binaries que coincidan con las imágenes Docker.
+- Recomendado: v2.5.x para peer/orderer y v1.5.x para Fabric-CA.
+- `jq` instalado (para parsear JSON en scripts).
+- Go instalado si el chaincode es Go.
+- Git Bash o WSL recomendados en Windows.
+- Variables de entorno y PATH apuntando a `fabric-samples/bin`.
+
+### 8.1. Instalación rápida de utilidades
+
+**Windows (choco):**
+```powershell
+choco install -y jq golang
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install -y jq golang-go
+```
+
+**PATH (PowerShell):**
+```powershell
+$env:PATH = "C:\fabric-project\fabric-samples\bin;" + $env:PATH
+```
+
+**PATH (Git Bash/WSL):**
+```bash
+export PATH=/c/fabric-project/fabric-samples/bin:$PATH
+```
+
+---
+
+## 9. Preparar el proyecto
+
+```bash
+# Clonar fabric-samples
+git clone https://github.com/hyperledger/fabric-samples.git
+cd fabric-samples
+
+# (Opcional) Checkout a la rama/tag compatible
+git checkout v2.5.0
+
+# Verificar binarios
+peer version
+orderer version
+fabric-ca-client version
+```
+
+---
+
+## 10. Levantar la Red y Crear Canal
+
+```bash
+cd fabric-samples/test-network
+
+# Limpiar todo
+./network.sh down
+
+# (Opcional) Reconstruir imágenes/volúmenes
+docker system prune -af
+docker volume prune -f
+
+# Levantar con CouchDB y CA
+./network.sh up createChannel -ca -s couchdb -c mychannel
+```
+
+**Salida esperada:**
+- Contenedores: `orderer.example.com`, `peer0.org1.example.com`, `peer0.org2.example.com`, `couchdb0`, `couchdb1`, `ca_org1`, `ca_org2`.
+- Canal `mychannel` creado.
+- Peers unidos al canal.
+
+> **Nota**: Si aparece error de conexión a `localhost:7051` en Windows, usar Git Bash/WSL y evitar conflictos IPv6 (`[::1]`).
+
+---
+
+## 11. Desplegar Chaincode (Go)
+
+```bash
+# Desde test-network
+./network.sh deployCC -ccn basic -ccp ../asset-transfer-basic/chaincode-go -ccl go
+```
+
+**Esto:**
+- Empaqueta e instala chaincode en los peers.
+- Aprueba y commitea la definición del chaincode en `mychannel`.
+
+> **Solución de errores comunes:**
+> - Si ves `go: command not found` → instalá Go y re-exportá PATH.
+> - Si ves `jq: command not found` → instalá jq.
+
+---
+
+## 12. Probar el Chaincode
+
+```bash
+# Setear Org1
+export PATH=${PWD}/../bin:$PATH
+export FABRIC_CFG_PATH=$PWD/../config/
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID="Org1MSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+
+# Init ledger
+peer chaincode invoke -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem \
+  -C mychannel -n basic \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt \
+  -c '{"Args":["InitLedger"]}'
+
+# Consultar (query)
+peer chaincode query -C mychannel -n basic -c '{"Args":["GetAllAssets"]}'
+```
+
+---
+
+## 13. Guía Rápida - Comandos Esenciales
+
+### Levantar la red completa:
+```bash
+cd fabric-samples/test-network
+./network.sh down
+./network.sh up createChannel -ca -s couchdb -c mychannel
+./network.sh deployCC -ccn basic -ccp ../asset-transfer-basic/chaincode-go -ccl go
+```
+
+### Variables de entorno para Org1:
+```bash
+export PATH=${PWD}/../bin:$PATH
+export FABRIC_CFG_PATH=$PWD/../config/
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID="Org1MSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+```
+
+### Comandos básicos de prueba:
+```bash
+# Inicializar ledger
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n basic --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt --peerAddresses localhost:9051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt -c '{"Args":["InitLedger"]}'
+
+# Consultar todos los activos
+peer chaincode query -C mychannel -n basic -c '{"Args":["GetAllAssets"]}'
+```
+
+---
+
+
+## 14. Recursos Adicionales
+
+- [Documentación oficial de Hyperledger Fabric](https://hyperledger-fabric.readthedocs.io/)
+- [Fabric Samples](https://github.com/hyperledger/fabric-samples)
+- [Guía de desarrollo de chaincode](https://hyperledger-fabric.readthedocs.io/en/latest/developapps/developing_applications.html)
+- [Configuración de red](https://hyperledger-fabric.readthedocs.io/en/latest/network/network.html)
