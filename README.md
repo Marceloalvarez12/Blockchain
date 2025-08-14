@@ -138,6 +138,59 @@ Este comando **lee** el estado actual de un activo en el ledger sin generar una 
 
 ```bash
 peer chaincode query -C mychannel -n basic -c '{"Args":["ReadAsset","credencial01"]}'
+
+Resumen del proyecto:
+¡Perfecto! Centrémonos exclusivamente en la "Caja Fuerte Maestra" y sus componentes internos.
+
+Aquí tienes un resumen detallado de la parte de **blockchain (Hyperledger Fabric)**, explicando qué es cada pieza, para qué sirve y dónde se guardan los datos.
+
+---
+
+### **Resumen Conceptual de la Infraestructura Blockchain**
+
+Imagina tu sistema de credenciales como una **notaría digital de máxima seguridad**, compartida entre varias instituciones de confianza (como la UTN y empresas).
+
+#### **1. La Red Hyperledger Fabric (La Notaría en sí)**
+*   **¿Qué es?** No es un solo programa, sino una **infraestructura distribuida** de servidores (contenedores Docker) que trabajan juntos. Es una red **privada y permisionada**, lo que significa que solo los miembros invitados pueden entrar y operar, como en un club exclusivo.
+*   **¿Para qué sirve?** Para crear un registro de eventos (transacciones) que sea **compartido, inmutable y verificable** por todos los miembros autorizados. Es la base de la confianza digital del sistema.
+
+#### **2. Los Nodos (Los Funcionarios de la Notaría)**
+La notaría tiene diferentes tipos de "funcionarios", cada uno con un trabajo específico.
+
+*   **Peers (Pares):**
+    *   **¿Qué son?** Son los "escribanos" o "archivadores" de la red. Cada organización (como la UTN) tiene al menos uno.
+    *   **¿Para qué sirven?** Tienen dos trabajos cruciales:
+        1.  **Almacenar el Ledger:** Guardan una copia completa del libro de contabilidad.
+        2.  **Ejecutar el Chaincode:** Son los únicos que pueden "leer" las reglas del negocio y validar si una transacción propuesta es correcta.
+*   **Orderer (Ordenador):**
+    *   **¿Qué es?** Es el "notario principal" o el "juez de paz" de la red.
+    *   **¿Para qué sirve?** Su única misión es recibir las transacciones ya validadas por los Peers, ponerlas en **orden cronológico** y empaquetarlas en bloques sellados. Luego, reparte estos bloques a todos los Peers para que los añadan a su copia del libro. **El Orderer garantiza que todos tengan la misma historia en el mismo orden.**
+*   **CA (Autoridad de Certificación):**
+    *   **¿Qué es?** Es la "oficina de credenciales" interna de la notaría. Cada organización tiene la suya.
+    *   **¿Para qué sirve?** Emite y gestiona las **identidades digitales** (certificados X.509) de todos los participantes (Peers, Orderers, usuarios, aplicaciones). Es la que dice "Doy fe de que este peer pertenece a la UTN" o "Doy fe de que esta aplicación tiene permiso para emitir credenciales". **Es la base de la seguridad y los permisos.**
+
+#### **3. El Ledger (El Libro de Contabilidad)**
+*   **¿Qué es?** Es el libro de contabilidad digital que cada Peer almacena. Es la "fuente de la verdad". Se compone de dos partes:
+    1.  **La Cadena de Bloques (Blockchain):**
+        *   **¿Qué es?** Un archivo de registro **solo de adición**, un historial de todas las transacciones que han ocurrido, encadenadas criptográficamente.
+        *   **¿Para qué sirve?** Proporciona la **inmutabilidad** y la **trazabilidad**. Permite auditar la historia completa de cualquier credencial.
+        *   **¿Dónde se guarda?** Físicamente, en el sistema de archivos del contenedor Docker del Peer, en una ruta como `/var/hyperledger/production/ledgersData/chains/chains/mychannel/`.
+    2.  **El Estado Mundial (World State):**
+        *   **¿Qué es?** Una base de datos que contiene el **valor actual y final** de todos los activos del ledger. No guarda la historia, solo la "foto" del presente.
+        *   **¿Para qué sirve?** Para realizar **consultas rápidas y eficientes**. Cuando pides los datos de "credencial01", el Peer no lee toda la cadena de bloques, sino que busca la última versión en esta base de datos.
+        *   **¿Dónde se guarda?** En nuestro caso, lo configuramos para usar **CouchDB**. Esto significa que los datos se guardan en un contenedor Docker separado de CouchDB, que está vinculado al Peer. Podemos acceder a estos datos directamente a través de la interfaz web de CouchDB (ej. `http://localhost:5984/_utils/`).
+
+#### **4. El Chaincode (Las Reglas de la Notaría)**
+*   **¿Qué es?** Es el "reglamento interno" de la notaría, escrito en código (en nuestro caso, Go). Es el equivalente a un Smart Contract.
+*   **¿Para qué sirve?** Define:
+    *   **La Estructura de Datos:** Cómo es una "credencial" (qué campos tiene: ID, Alumno, Programa, etc.).
+    *   **Las Funciones Válidas:** Qué operaciones se pueden realizar (`CreateAsset`, `ReadAsset`).
+    *   **La Lógica de Validación:** Las condiciones que debe cumplir una transacción para ser válida (ej. "Para crear una credencial, el ID no debe existir previamente y el emisor debe ser Org1").
+*   **¿Dónde se guarda?** El código del chaincode se **instala** en el sistema de archivos de cada Peer. Cuando se ejecuta, se lanza en su propio contenedor Docker seguro, vinculado al Peer.
+
+#### **5. El Canal (La Sala de Reuniones Privada)**
+*   **¿Qué es?** Es una "sub-red" privada dentro de la red Fabric. En nuestro caso, creamos `mychannel`.
+*   **¿Para qué sirve?** Para la **privacidad y el aislamiento**. Solo los miembros de un canal pueden ver las transacciones y los datos de ese canal. Cada canal tiene su propio ledger independiente. Si la UTN tuviera otro canal con el Ministerio de Educación, las empresas de `mychannel` no podrían ver esas transacciones.
 ```
 **Respuesta esperada:** Un objeto JSON con los detalles de la credencial.
 
