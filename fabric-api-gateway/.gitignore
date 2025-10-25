@@ -1,0 +1,14 @@
+# Archivo .gitignore para la API Gateway (fabric-api-gateway)
+
+# Dependencias
+node_modules
+
+# Archivos de entorno
+.env
+
+# Archivos de billetera generados localmente
+wallet/
+
+# Logs
+*.log
+npm-debug.log*

@@ -1,0 +1,44 @@
+# Archivo .gitignore principal
+
+# Sistema Operativo y Editores de Código
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs y Archivos Temporales
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencias de Node.js (se ignoran en todos los subdirectorios)
+**/node_modules
+
+# Entornos Virtuales de Python (se ignoran en todos los subdirectorios)
+**/venv
+
+# Artefactos de Compilación de Hardhat
+**/artifacts
+**/cache
+**/typechain-types
+
+# Archivos de entorno - ¡MUY IMPORTANTE PARA LA SEGURIDAD!
+# Nunca subir archivos que contengan claves privadas o secretos.
+**/.env
+
+# Archivos de Billetera (Wallet) de Fabric
+# Contienen claves privadas, nunca deben ser compartidos.
+**/wallet
+
+# Archivos de Paquete de Chaincode generados
+*.tar.gz
+
+# Archivos de base de datos locales de Django
+*.sqlite3
+
+# Archivos de Python compilado y caché
+**/__pycache__/
+*.pyc

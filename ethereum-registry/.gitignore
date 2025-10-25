@@ -1,0 +1,26 @@
+# Archivo .gitignore para el proyecto Hardhat (ethereum-registry)
+
+# Dependencias
+node_modules
+
+# Archivos de entorno
+.env
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Artefactos de compilación
+artifacts
+cache
+typechain-types
+
+# Reportes de pruebas
+coverage
+coverage.json
+
+# Archivos del editor
+.vscode
+.idea
